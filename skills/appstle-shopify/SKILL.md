@@ -13,7 +13,7 @@ You have access to the `appstle_api` MCP tool for authenticated Appstle Subscrip
 
 - **Base path**: All endpoints start with `/api/external/v2/`
 - **Auth**: Handled automatically by the MCP tool (X-API-Key header + api_key query param)
-- **Pagination**: Spring Pageable format — `page` (0-based), `size`, `sort` (e.g. `created_at,desc`)
+- **Pagination**: Spring Pageable — `page` (0-based), `size` (default 5, max 10), `sort` (e.g. `created_at,desc`)
 - **Customer IDs**: Always numeric — strip `gid://shopify/Customer/` prefix if present
 - **Contract IDs**: Always numeric int64
 - **Dates**: ISO 8601 with timezone: `2024-03-15T00:00:00Z`
@@ -70,6 +70,8 @@ appstle_api({ method: "POST", path: "/api/external/v2/subscription-contract-deta
 10. **Cancel is DELETE**: Cancel with feedback uses `DELETE /subscription-contracts/{contractId}` with query params, not the PUT status endpoint.
 
 11. **Sort field names are snake_case**: `created_at,desc`, `billingDate,desc`, `createAt,desc` (activity logs).
+
+12. **Max page size**: Always use `size` ≤ 10 (default: 5). Larger values produce responses that exceed tool result limits and become unreadable. If you need more results, paginate with multiple requests using `page` parameter.
 
 ## Safety Rules
 

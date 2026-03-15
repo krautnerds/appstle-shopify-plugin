@@ -2,6 +2,12 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.0.6] - 2026-03-15
+
+### Fixed
+- Oversized API responses (370K+ chars) no longer break tool results — server truncates at 80K chars with helpful message
+- Added max page size guidance (`size` ≤ 10, default 5) to prevent unreadable responses
+
 ## [3.0.5] - 2026-03-15
 
 ### Changed

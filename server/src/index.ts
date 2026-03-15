@@ -99,7 +99,7 @@ async function main() {
 
   const server = new McpServer({
     name: 'appstle-shopify',
-    version: '3.0.5',
+    version: '3.0.6',
   });
 
   server.tool(
@@ -114,9 +114,14 @@ async function main() {
         .describe('JSON request body (only for POST and specific PUT endpoints that use body — most PUT endpoints use query params instead)'),
     },
     async ({ method, path, params, body }) => {
+      const MAX_RESPONSE_CHARS = 80_000;
       try {
         const data = await client.request<unknown>(method, path, params, body);
-        const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        let text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        if (text.length > MAX_RESPONSE_CHARS) {
+          text = text.slice(0, MAX_RESPONSE_CHARS) +
+            `\n\n[Response truncated: ${text.length} chars exceeds ${MAX_RESPONSE_CHARS} limit. Use smaller \`size\` param (max 10) or filter more specifically.]`;
+        }
         return { content: [{ type: 'text' as const, text }] };
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
