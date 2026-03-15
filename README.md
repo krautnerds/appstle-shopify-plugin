@@ -1,6 +1,6 @@
 # Appstle Shopify Plugin for Claude Code
 
-[![Version](https://img.shields.io/badge/version-3.0.4-blue.svg)](./server/package.json)
+[![Version](https://img.shields.io/badge/version-3.0.5-blue.svg)](./server/package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED.svg)](https://docs.anthropic.com/en/docs/claude-code)
 

@@ -2,6 +2,13 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.0.5] - 2026-03-15
+
+### Changed
+- Moved `.env` loading from shell (`start.sh`) to Node via `dotenv` in `index.ts` — more portable and easier to debug
+- `start.sh` stripped to bootstrap-only (~18 lines, down from 54)
+- Added `dotenv` dependency to `server/package.json`
+
 ## [3.0.4] - 2026-03-15
 
 ### Removed

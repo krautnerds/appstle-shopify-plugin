@@ -8,7 +8,7 @@ Claude Code plugin providing Appstle Subscription API access for Shopify stores 
 cd server && npm install          # Install dependencies
 cd server && npm run build        # Compile TypeScript (outputs to server/dist/)
 cd server && npm start            # Start MCP server directly (needs APPSTLE_API_KEY)
-bash server/start.sh              # Start with .env auto-loading (how Claude Code launches it)
+bash server/start.sh              # Auto-bootstrap + start (how Claude Code launches it)
 ```
 
 No tests, no linter configured in this plugin.
@@ -23,10 +23,10 @@ No tests, no linter configured in this plugin.
 
 ```
 .claude-plugin/plugin.json     # Plugin manifest
-.mcp.json                      # MCP server registration (no env block — start.sh handles env)
+.mcp.json                      # MCP server registration (no env block — dotenv handles env)
 server/
-  start.sh                     # Shell wrapper: loads .env, sets APPSTLE_BASE_URL default, starts node
-  src/index.ts                 # MCP server entry — registers appstle_api tool
+  start.sh                     # Shell wrapper: auto-bootstrap only, then starts node
+  src/index.ts                 # MCP server entry — dotenv loading, registers appstle_api tool
   src/client.ts                # AppstleApiClient class — generic HTTP client
   src/types.ts                 # AppstleErrorResponse type only
   dist/                        # Compiled JS (gitignored)
@@ -42,14 +42,14 @@ skills/appstle-shopify/
 | File | Purpose |
 |------|---------|
 | `.mcp.json` | Server registration — intentionally has NO `env` block (see Gotchas #1) |
-| `server/start.sh` | Auto-bootstrap (npm install + build if dist missing), env loading, server start |
-| `server/src/index.ts` | Single tool registration, stdio transport |
+| `server/start.sh` | Auto-bootstrap only (npm install + build if dist missing), then exec node |
+| `server/src/index.ts` | Dotenv loading, single tool registration, stdio transport |
 | `server/src/client.ts` | HTTP client with dual auth (header + query param) |
 | `skills/appstle-shopify/SKILL.md` | Primary skill — all endpoint docs and safety rules |
 
 ## Gotchas
 
-1. **No `env` block in `.mcp.json`**: Claude Code validates MCP env vars before the server starts. Shell variable expansions like `${APPSTLE_API_KEY:-}` resolve to empty, causing "Missing environment variables" errors. All env loading is handled by `start.sh` at runtime instead.
+1. **No `env` block in `.mcp.json`**: Claude Code validates MCP env vars before the server starts. Shell variable expansions like `${APPSTLE_API_KEY:-}` resolve to empty, causing "Missing environment variables" errors. All env loading is handled by `dotenv` in `index.ts` at runtime instead.
 
 2. **Dual auth required**: The Appstle API requires BOTH `X-API-Key` header AND `api_key` query parameter. The client adds both automatically (`client.ts:44`). Removing either breaks certain endpoints (notably activity-logs).
 
@@ -59,16 +59,16 @@ skills/appstle-shopify/
 
 5. **Version in five places**: See Release Workflow section below. All must stay in sync.
 
-6. **`.env` search paths in `start.sh`**: Searches CWD-relative paths first, then `CLAUDE_PLUGIN_ROOT`-relative, then git root, then `$HOME` fallbacks. If the plugin runs from the cache, git-root detection ensures `.env` is still found.
+6. **`.env` search paths in `index.ts`**: The `loadEnvFile()` function in `index.ts` searches CWD-relative paths first, then `CLAUDE_PLUGIN_ROOT`-relative, then script-dir-relative, then git root (via `execFileSync`), then `$HOME` fallbacks. Uses `dotenv.config()` on the first match containing `APPSTLE_API_KEY`.
 
-7. **Auto-bootstrap in `start.sh`**: If `dist/index.js` is missing (e.g. plugin cache has no compiled JS), `start.sh` auto-runs `npm install && npm run build`. First launch takes ~5-10s extra.
+7. **Auto-bootstrap in `start.sh`**: If `dist/index.js` is missing (e.g. plugin cache has no compiled JS), `start.sh` auto-runs `npm install && npm run build`. First launch takes ~5-10s extra. This is the only responsibility of `start.sh` — env loading is handled by Node.
 
 ## Environment Variables
 
 | Variable | Required | Default | Loaded by |
 |----------|----------|---------|-----------|
-| `APPSTLE_API_KEY` | Yes | — | `start.sh` from `.env` or shell |
-| `APPSTLE_BASE_URL` | No | `https://subscription-admin.appstle.com` | `start.sh` fallback |
+| `APPSTLE_API_KEY` | Yes | — | `index.ts` via dotenv from `.env` or shell |
+| `APPSTLE_BASE_URL` | No | `https://subscription-admin.appstle.com` | `index.ts` fallback |
 
 ## Release Workflow
 
