@@ -42,7 +42,7 @@ skills/appstle-shopify/
 | File | Purpose |
 |------|---------|
 | `.mcp.json` | Server registration — intentionally has NO `env` block (see Gotchas #1) |
-| `server/start.sh` | Env loading + `APPSTLE_BASE_URL` default + server start |
+| `server/start.sh` | Auto-bootstrap (npm install + build if dist missing), env loading, server start |
 | `server/src/index.ts` | Single tool registration, stdio transport |
 | `server/src/client.ts` | HTTP client with dual auth (header + query param) |
 | `skills/appstle-shopify/SKILL.md` | Primary skill — all endpoint docs and safety rules |
@@ -59,7 +59,9 @@ skills/appstle-shopify/
 
 5. **Version in five places**: See Release Workflow section below. All must stay in sync.
 
-6. **`.env` search paths in `start.sh`**: Searches CWD-relative paths first, then `CLAUDE_PLUGIN_ROOT`-relative paths. If the plugin is installed in a non-standard location, the `CLAUDE_PLUGIN_ROOT` paths ensure `.env` is still found.
+6. **`.env` search paths in `start.sh`**: Searches CWD-relative paths first, then `CLAUDE_PLUGIN_ROOT`-relative, then git root, then `$HOME` fallbacks. If the plugin runs from the cache, git-root detection ensures `.env` is still found.
+
+7. **Auto-bootstrap in `start.sh`**: If `dist/index.js` is missing (e.g. plugin cache has no compiled JS), `start.sh` auto-runs `npm install && npm run build`. First launch takes ~5-10s extra.
 
 ## Environment Variables
 

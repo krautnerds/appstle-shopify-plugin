@@ -4,6 +4,19 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Auto-bootstrap: install deps + compile if dist is missing (e.g. plugin cache)
+if [ ! -f "$SCRIPT_DIR/dist/index.js" ]; then
+  echo "[appstle-shopify] First run — installing dependencies and compiling..." >&2
+  (cd "$SCRIPT_DIR" && npm install 2>&1 | tail -3 >&2 && npm run build 2>&1 | tail -3 >&2)
+  if [ ! -f "$SCRIPT_DIR/dist/index.js" ]; then
+    echo "[appstle-shopify] ERROR: Build failed — dist/index.js not found after compile." >&2
+    exit 1
+  fi
+fi
+
+# Try to find project root via git (covers subdirectory CWD scenarios)
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+
 # If APPSTLE_API_KEY is not in environment, try loading from .env files
 if [ -z "$APPSTLE_API_KEY" ]; then
   # Search order: CWD relatives → CLAUDE_PLUGIN_ROOT relatives → script-relative
@@ -16,7 +29,10 @@ if [ -z "$APPSTLE_API_KEY" ]; then
     "$CLAUDE_PLUGIN_ROOT/../../.env" \
     "$SCRIPT_DIR/../.env" \
     "$SCRIPT_DIR/../../.env" \
-    "$SCRIPT_DIR/../../../.env"; do
+    "$SCRIPT_DIR/../../../.env" \
+    "${GIT_ROOT:+$GIT_ROOT/.env}" \
+    "$HOME/Work/eisenhorn/eisenhorn-astro/.env" \
+    "$HOME/.env"; do
     if [ -f "$candidate" ] && grep -q "APPSTLE_API_KEY" "$candidate" 2>/dev/null; then
       export $(grep -E '^APPSTLE_' "$candidate" | xargs)
       break
