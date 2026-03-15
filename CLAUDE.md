@@ -11,7 +11,12 @@ cd server && npm start            # Start MCP server directly (needs APPSTLE_API
 bash server/start.sh              # Auto-bootstrap + start (how Claude Code launches it)
 ```
 
-No tests, no linter configured in this plugin.
+Query dump files (after an API response has been auto-dumped):
+```bash
+node server/dist/query.js /tmp/appstle_<slug>_<ts>.json "SELECT status, COUNT(*) as n FROM ? GROUP BY status"
+```
+
+Requires **Node >= 22**. No tests, no linter configured in this plugin.
 
 ## Architecture
 
@@ -26,10 +31,12 @@ No tests, no linter configured in this plugin.
 .mcp.json                      # MCP server registration (no env block — dotenv handles env)
 server/
   start.sh                     # Shell wrapper: auto-bootstrap only, then starts node
-  src/index.ts                 # MCP server entry — dotenv loading, registers appstle_api tool
+  src/index.ts                 # MCP server entry — dotenv loading, registers appstle_api tool, auto-dump logic
   src/client.ts                # AppstleApiClient class — generic HTTP client
+  src/query.ts                 # Standalone CLI: SQL queries on dump files via alasql
   src/types.ts                 # AppstleErrorResponse type only
   dist/                        # Compiled JS (gitignored)
+  .gitignore                   # Covers node_modules/ and dist/
 skills/appstle-shopify/
   SKILL.md                     # Endpoint quick map, API quirks, safety rules
   references/endpoints.md      # Full parameter reference per endpoint
@@ -45,6 +52,7 @@ skills/appstle-shopify/
 | `server/start.sh` | Auto-bootstrap only (npm install + build if dist missing), then exec node |
 | `server/src/index.ts` | Dotenv loading, single tool registration, stdio transport |
 | `server/src/client.ts` | HTTP client with dual auth (header + query param) |
+| `server/src/query.ts` | Standalone SQL query script for dump files (compiled to `dist/query.js`) |
 | `skills/appstle-shopify/SKILL.md` | Primary skill — all endpoint docs and safety rules |
 
 ## Gotchas
@@ -62,6 +70,12 @@ skills/appstle-shopify/
 6. **`.env` search paths in `index.ts`**: The `loadEnvFile()` function in `index.ts` searches CWD-relative paths first, then `CLAUDE_PLUGIN_ROOT`-relative, then script-dir-relative, then git root (via `execFileSync`), then `$HOME` fallbacks. Uses `dotenv.config()` on the first match containing `APPSTLE_API_KEY`.
 
 7. **Auto-bootstrap in `start.sh`**: If `dist/index.js` is missing (e.g. plugin cache has no compiled JS), `start.sh` auto-runs `npm install && npm run build`. First launch takes ~5-10s extra. This is the only responsibility of `start.sh` — env loading is handled by Node.
+
+8. **Hardcoded `.env` fallback path**: `loadEnvFile()` in `index.ts` contains a developer-specific fallback path (`~/Work/eisenhorn/eisenhorn-astro/.env`). This works for the original dev environment but won't help other contributors — they should set `APPSTLE_API_KEY` in their shell or a project-local `.env`.
+
+9. **Auto-dump for large responses**: API responses >4KB are written to `/tmp/appstle_{slug}_{timestamp}.json` and a compact summary is returned to Claude instead of the full JSON. This keeps Claude's context lean while preserving all data. Dump files older than 2 hours are cleaned up on server startup. Query dump files with: `node server/dist/query.js <file> "<SQL>"`.
+
+10. **`alasql` is a runtime dependency**: The `query.js` script uses `alasql` (~1.5MB, pure JS) for SQL queries on dump files. It's bundled in `server/package.json` — no system-level dependencies required.
 
 ## Environment Variables
 

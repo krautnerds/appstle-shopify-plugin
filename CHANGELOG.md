@@ -2,6 +2,22 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.1.0] - 2026-03-15
+
+### Added
+- Auto-dump large API responses (>4KB) to `/tmp/appstle_*.json` with compact summaries returned to Claude
+- Standalone SQL query script (`query.js`) powered by `alasql` for filtering, aggregating, and searching dump files
+- Bulk data extraction workflow in skill playbooks
+- `alasql` dependency (~1.5MB, pure JS) for SQL support
+
+### Changed
+- Page size guidance increased from max 10 to max 50 (dump files keep context lean)
+- Replaced 80K-char truncation with threshold-based dump-to-file at 4KB
+- Old dump files (>2h) automatically cleaned up on server startup
+
+### Removed
+- `MAX_RESPONSE_CHARS` constant and truncation logic
+
 ## [3.0.6] - 2026-03-15
 
 ### Fixed

@@ -9,8 +9,9 @@
  *   APPSTLE_BASE_URL - Optional. Defaults to https://subscription-admin.appstle.com
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, readdirSync, unlinkSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, resolve, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { config as dotenvConfig } from 'dotenv';
@@ -19,8 +20,140 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { AppstleApiClient } from './client.js';
 
+const INLINE_THRESHOLD = 4096; // 4KB — responses larger than this get dumped to file
+const DUMP_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const queryScriptPath = join(scriptDir, 'query.js');
+
 function log(...args: unknown[]): void {
   console.error('[appstle]', ...args);
+}
+
+/**
+ * Delete /tmp/appstle_*.json files older than DUMP_MAX_AGE_MS.
+ */
+function cleanupOldDumpFiles(): void {
+  const tmp = tmpdir();
+  const now = Date.now();
+  let cleaned = 0;
+  try {
+    for (const name of readdirSync(tmp)) {
+      if (!name.startsWith('appstle_') || !name.endsWith('.json')) continue;
+      const filePath = join(tmp, name);
+      try {
+        const stat = statSync(filePath);
+        if (now - stat.mtimeMs > DUMP_MAX_AGE_MS) {
+          unlinkSync(filePath);
+          cleaned++;
+        }
+      } catch {
+        // file may have been removed between readdir and stat — ignore
+      }
+    }
+  } catch {
+    // tmpdir unreadable — ignore
+  }
+  if (cleaned > 0) log(`Cleaned up ${cleaned} old dump file(s)`);
+}
+
+/**
+ * Extract a readable slug from an API path.
+ * E.g. "/api/external/v2/subscription-contract-details" → "contract-details"
+ */
+function endpointSlug(path: string): string {
+  const last = path.split('/').filter(Boolean).pop() ?? 'response';
+  // Strip common prefixes for shorter names
+  return last
+    .replace(/^subscription-/, '')
+    .replace(/^subscription-contract-/, 'contract-')
+    .replace(/^subscription-billing-/, 'billing-');
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+}
+
+function truncateObj(obj: Record<string, unknown>, maxKeys: number): string {
+  const keys = Object.keys(obj);
+  const shown = keys.slice(0, maxKeys);
+  const pairs = shown.map((k) => {
+    const v = obj[k];
+    if (v === null || v === undefined) return `${k}: null`;
+    if (typeof v === 'string') return `${k}: "${v.length > 40 ? v.slice(0, 37) + '...' : v}"`;
+    if (typeof v === 'number' || typeof v === 'boolean') return `${k}: ${v}`;
+    if (Array.isArray(v)) return `${k}: [${v.length} items]`;
+    if (typeof v === 'object') return `${k}: {...}`;
+    return `${k}: ${String(v)}`;
+  });
+  const suffix = keys.length > maxKeys ? `, ... +${keys.length - maxKeys} more` : '';
+  return `{${pairs.join(', ')}${suffix}}`;
+}
+
+/**
+ * Dump data to a temp file and return a compact summary for Claude.
+ */
+function dumpAndSummarize(data: unknown, apiPath: string): string {
+  const slug = endpointSlug(apiPath);
+  const timestamp = Date.now();
+  const filePath = join(tmpdir(), `appstle_${slug}_${timestamp}.json`);
+  const json = JSON.stringify(data, null, 2);
+
+  writeFileSync(filePath, json, 'utf-8');
+  const fileSize = formatBytes(Buffer.byteLength(json, 'utf-8'));
+
+  const lines: string[] = [];
+  lines.push(`API Response: ${slug}`);
+
+  // Detect paginated response
+  if (data && typeof data === 'object' && !Array.isArray(data) && 'content' in data) {
+    const pg = data as Record<string, unknown>;
+    const content = pg.content as unknown[];
+    const totalElements = pg.totalElements ?? '?';
+    const totalPages = pg.totalPages ?? '?';
+    const pageNumber = pg.number ?? pg.page ?? '?';
+    const hasMore = pg.last === false ? 'yes' : pg.last === true ? 'no' : '?';
+
+    lines.push(`Paginated: ${content.length} items on this page | ${totalElements} total | Page ${pageNumber} of ${totalPages} | Has more: ${hasMore}`);
+    lines.push(`File: ${filePath} (${fileSize})`);
+
+    if (content.length > 0 && content[0] && typeof content[0] === 'object') {
+      const first = content[0] as Record<string, unknown>;
+      const keys = Object.keys(first);
+      lines.push('');
+      lines.push(`Fields (${keys.length}): ${keys.slice(0, 12).join(', ')}${keys.length > 12 ? ', ...' : ''}`);
+      lines.push(`Sample: ${truncateObj(first, 6)}`);
+    }
+  } else if (Array.isArray(data)) {
+    lines.push(`Array: ${data.length} items`);
+    lines.push(`File: ${filePath} (${fileSize})`);
+
+    if (data.length > 0 && data[0] && typeof data[0] === 'object') {
+      const first = data[0] as Record<string, unknown>;
+      const keys = Object.keys(first);
+      lines.push('');
+      lines.push(`Fields (${keys.length}): ${keys.slice(0, 12).join(', ')}${keys.length > 12 ? ', ...' : ''}`);
+      lines.push(`Sample: ${truncateObj(first, 6)}`);
+    }
+  } else {
+    lines.push(`Single object`);
+    lines.push(`File: ${filePath} (${fileSize})`);
+    if (data && typeof data === 'object') {
+      const keys = Object.keys(data as Record<string, unknown>);
+      lines.push('');
+      lines.push(`Fields (${keys.length}): ${keys.slice(0, 12).join(', ')}${keys.length > 12 ? ', ...' : ''}`);
+    }
+  }
+
+  lines.push('');
+  lines.push('Query with:');
+  lines.push(`  node ${queryScriptPath} "${filePath}" "SELECT * FROM ? LIMIT 5"`);
+  lines.push(`  node ${queryScriptPath} "${filePath}" "SELECT status, COUNT(*) as n FROM ? GROUP BY status"`);
+
+  return lines.join('\n');
 }
 
 /**
@@ -30,7 +163,6 @@ function log(...args: unknown[]): void {
 function loadEnvFile(): void {
   if (process.env.APPSTLE_API_KEY) return; // already set in environment
 
-  const scriptDir = dirname(fileURLToPath(import.meta.url));
   const cwd = process.cwd();
   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT ?? '';
   const home = process.env.HOME ?? '';
@@ -84,6 +216,7 @@ function loadEnvFile(): void {
 
 async function main() {
   loadEnvFile();
+  cleanupOldDumpFiles();
 
   const apiKey = process.env.APPSTLE_API_KEY;
   const baseUrl = process.env.APPSTLE_BASE_URL || 'https://subscription-admin.appstle.com';
@@ -99,7 +232,7 @@ async function main() {
 
   const server = new McpServer({
     name: 'appstle-shopify',
-    version: '3.0.6',
+    version: '3.1.0',
   });
 
   server.tool(
@@ -114,13 +247,12 @@ async function main() {
         .describe('JSON request body (only for POST and specific PUT endpoints that use body — most PUT endpoints use query params instead)'),
     },
     async ({ method, path, params, body }) => {
-      const MAX_RESPONSE_CHARS = 80_000;
       try {
         const data = await client.request<unknown>(method, path, params, body);
-        let text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-        if (text.length > MAX_RESPONSE_CHARS) {
-          text = text.slice(0, MAX_RESPONSE_CHARS) +
-            `\n\n[Response truncated: ${text.length} chars exceeds ${MAX_RESPONSE_CHARS} limit. Use smaller \`size\` param (max 10) or filter more specifically.]`;
+        const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        if (text.length > INLINE_THRESHOLD) {
+          const summary = dumpAndSummarize(data, path);
+          return { content: [{ type: 'text' as const, text: summary }] };
         }
         return { content: [{ type: 'text' as const, text }] };
       } catch (error) {

@@ -1,6 +1,6 @@
 {
   "name": "appstle-shopify-plugin-server",
-  "version": "3.0.6",
+  "version": "3.1.0",
   "type": "module",
   "private": true,
   "engines": {
@@ -12,11 +12,12 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
+    "alasql": "^4.17.0",
     "dotenv": "^16.4.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
   }
 }

@@ -1,6 +1,6 @@
 # Appstle Subscriptions Plugin for Claude Code — Shopify Subscription Management
 
-[![Appstle Shopify Plugin Version](https://img.shields.io/badge/version-3.0.6-blue.svg)](./server/package.json)
+[![Appstle Shopify Plugin Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](./server/package.json)
 [![Node.js Version Requirement](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED.svg)](https://docs.anthropic.com/en/docs/claude-code)
 
@@ -111,8 +111,9 @@ appstle-shopify-plugin/
   server/
     start.sh               # Shell wrapper — loads .env, starts server
     src/
-      index.ts             # MCP server entry point (stdio transport)
+      index.ts             # MCP server entry point (stdio transport, auto-dump)
       client.ts            # HTTP client with X-API-Key auth
+      query.ts             # Standalone CLI for SQL queries on dump files
       types.ts             # TypeScript response types
     dist/                  # Compiled output
   skills/
@@ -125,7 +126,7 @@ appstle-shopify-plugin/
         workflows.md       # Step-by-step playbooks for common tasks
 ```
 
-**MCP server** (`server/`): A single-tool MCP server that handles authentication and HTTP transport. The tool (`appstle_api`) accepts a method, path, optional query params, and optional body. It forwards the request to the Appstle API with proper `X-API-Key` headers. The `start.sh` wrapper loads environment variables from `.env` before starting the server.
+**MCP server** (`server/`): A single-tool MCP server that handles authentication and HTTP transport. The tool (`appstle_api`) accepts a method, path, optional query params, and optional body. It forwards the request to the Appstle API with proper `X-API-Key` headers. Large responses (>4KB) are automatically dumped to `/tmp/appstle_*.json` files and a compact summary is returned instead — keeping Claude's context lean while preserving all data for SQL queries via the bundled `query.js` script.
 
 **Skill** (`skills/appstle-shopify/`): Loaded by Claude Code on demand when subscription-related topics are detected. Contains the endpoint catalog, critical API quirks, safety rules for destructive operations, and workflow playbooks. This keeps context usage near zero until the skill is actually needed.
 
@@ -141,6 +142,11 @@ The skill activates automatically when you mention subscriptions, Appstle, billi
 
 **Look up a customer and their subscriptions:**
 > "Find all subscriptions for customer@example.com"
+
+**Bulk data extraction with SQL:**
+> "Fetch all active subscriptions (size=50), then show me a breakdown by status"
+>
+> Claude fetches the data, receives a dump file summary, and runs SQL queries like `SELECT status, COUNT(*) as n FROM ? GROUP BY status` on the dump file automatically.
 
 **Pause a subscription:**
 > "Pause subscription 12345"

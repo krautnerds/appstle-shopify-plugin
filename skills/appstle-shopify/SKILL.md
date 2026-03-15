@@ -13,7 +13,7 @@ You have access to the `appstle_api` MCP tool for authenticated Appstle Subscrip
 
 - **Base path**: All endpoints start with `/api/external/v2/`
 - **Auth**: Handled automatically by the MCP tool (X-API-Key header + api_key query param)
-- **Pagination**: Spring Pageable — `page` (0-based), `size` (default 5, max 10), `sort` (e.g. `created_at,desc`)
+- **Pagination**: Spring Pageable — `page` (0-based), `size` (default 20, max 50), `sort` (e.g. `created_at,desc`)
 - **Customer IDs**: Always numeric — strip `gid://shopify/Customer/` prefix if present
 - **Contract IDs**: Always numeric int64
 - **Dates**: ISO 8601 with timezone: `2024-03-15T00:00:00Z`
@@ -71,7 +71,56 @@ appstle_api({ method: "POST", path: "/api/external/v2/subscription-contract-deta
 
 11. **Sort field names are snake_case**: `created_at,desc`, `billingDate,desc`, `createAt,desc` (activity logs).
 
-12. **Max page size**: Always use `size` ≤ 10 (default: 5). Larger values produce responses that exceed tool result limits and become unreadable. If you need more results, paginate with multiple requests using `page` parameter.
+12. **Auto-dump for large responses**: Responses >4KB are automatically saved to `/tmp/appstle_*.json` and a compact summary is returned instead. The summary includes field names, a sample record, and ready-to-use `query.js` commands for SQL filtering. Use `size` up to 50 for efficient bulk fetches — the dump keeps Claude's context lean while preserving all data in the temp file.
+
+## Working with Large Responses
+
+Responses larger than 4KB are automatically dumped to `/tmp/appstle_*.json` files. Instead of the full JSON, you receive a compact summary with:
+- Item count, pagination info, and file path
+- Field names and a sample record
+- Ready-to-use `query.js` commands
+
+### Querying dump files with SQL
+
+Use the bundled `query.js` script via Bash to filter, aggregate, or search dump files:
+
+```bash
+# Basic filtering
+node <path-from-summary>/query.js "<file>" "SELECT id, customerEmail, status FROM ? WHERE status = 'ACTIVE'"
+
+# Aggregation
+node <path-from-summary>/query.js "<file>" "SELECT status, COUNT(*) as n FROM ? GROUP BY status"
+
+# Search by email pattern
+node <path-from-summary>/query.js "<file>" "SELECT * FROM ? WHERE customerEmail LIKE '%@example.com'"
+
+# Date filtering (string comparison works for ISO dates)
+node <path-from-summary>/query.js "<file>" "SELECT * FROM ? WHERE nextBillingDate > '2026-03-01'"
+
+# Top N by value
+node <path-from-summary>/query.js "<file>" "SELECT * FROM ? ORDER BY orderAmount DESC" --limit 10
+
+# Compact output (single line)
+node <path-from-summary>/query.js "<file>" "SELECT COUNT(*) as cnt FROM ?" --compact
+```
+
+The exact `node` command path is included in every dump summary — copy-paste it directly.
+
+### Common SQL patterns by endpoint
+
+| Endpoint | Useful queries |
+|----------|---------------|
+| contract-details | `GROUP BY status`, `WHERE customerEmail LIKE '%...'`, `ORDER BY orderAmount DESC` |
+| billing-attempts | `WHERE status = 'FAILURE'`, `SUM(amount)`, date range filters |
+| activity-logs | `WHERE eventType = '...'`, `GROUP BY eventType`, date range |
+| customers | `COUNT(*) GROUP BY ...`, email pattern search |
+
+### Cleanup
+
+Dump files older than 2 hours are automatically deleted when the MCP server starts. To clean up manually:
+```bash
+rm /tmp/appstle_*.json
+```
 
 ## Safety Rules
 

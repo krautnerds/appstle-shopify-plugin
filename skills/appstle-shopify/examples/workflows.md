@@ -294,6 +294,58 @@ Step 3: Verify
 ```
 Note: `percentage` and `amount` are mutually exclusive.
 
+---
+
+## 10. Bulk Data Extraction with SQL
+
+**Goal**: Extract, filter, or aggregate data from large API responses using SQL queries on dump files.
+
+### Fetch and query a large dataset:
+```
+Step 1: Fetch with large page size (auto-dumps to file)
+→ GET /subscription-contract-details?status=active&size=50
+→ Response: summary with file path + query.js commands
+
+Step 2: Get an overview of the data
+→ Bash: node <query.js path> "<file>" "SELECT status, COUNT(*) as n FROM ? GROUP BY status"
+
+Step 3: Extract specific records
+→ Bash: node <query.js path> "<file>" "SELECT id, customerEmail, orderAmount FROM ? WHERE orderAmount > 100 ORDER BY orderAmount DESC" --limit 20
+
+Step 4: Search by email pattern
+→ Bash: node <query.js path> "<file>" "SELECT id, customerEmail, status FROM ? WHERE customerEmail LIKE '%@example.com'"
+```
+
+### Multi-page extraction:
+```
+Step 1: Fetch page 0
+→ GET /subscription-contract-details?size=50&page=0
+→ Note totalElements and totalPages from summary
+
+Step 2: Fetch remaining pages
+→ GET /subscription-contract-details?size=50&page=1
+→ GET /subscription-contract-details?size=50&page=2
+→ (continue until all pages fetched)
+
+Step 3: Query across pages
+→ Run query.js on each dump file separately
+→ Or combine: "SELECT COUNT(*) as n FROM ?" on each file, sum manually
+```
+
+### Billing failure analysis:
+```
+Step 1: Fetch billing history
+→ GET /subscription-billing-attempts/past-orders?contractId={id}&size=50
+
+Step 2: Find failures
+→ Bash: node <query.js path> "<file>" "SELECT billingDate, status, errorMessage FROM ? WHERE status = 'FAILURE' ORDER BY billingDate DESC"
+
+Step 3: Summarize amounts
+→ Bash: node <query.js path> "<file>" "SELECT status, COUNT(*) as n, SUM(amount) as amt FROM ? GROUP BY status"
+```
+
+---
+
 ### Remove a discount:
 ```
 Step 1: Get subscription to find discount IDs

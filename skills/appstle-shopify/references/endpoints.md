@@ -15,7 +15,7 @@ GET /subscription-contract-details
 | Param | Type | Required | Notes |
 |-------|------|----------|-------|
 | customerName | string | Yes | Email address (misleading param name — searches by email) |
-| size | number | No | Results per page (default 20) |
+| size | number | No | Results per page (default 20, max 50) |
 | page | number | No | 0-based page number |
 | status | string | No | `active`, `paused`, `cancelled` (lowercase) |
 | sort | string | No | e.g. `created_at,desc` |
@@ -94,7 +94,7 @@ GET /subscription-contract-details
 | toCreatedDate | string | No | ISO 8601 |
 | fromNextDate | string | No | ISO 8601 — **must pair with toNextDate** |
 | toNextDate | string | No | ISO 8601 — **must pair with fromNextDate** |
-| size | number | No | Results per page (default 20, max 100) |
+| size | number | No | Results per page (default 20, recommended max 50) |
 | page | number | No | 0-based |
 | sort | string | No | `created_at,desc`, `created_at,asc`, `next_billing_date,asc`, `next_billing_date,desc` |
 
@@ -136,7 +136,7 @@ GET /subscription-billing-attempts/past-orders
 | Param | Type | Required | Notes |
 |-------|------|----------|-------|
 | contractId | number | Yes | |
-| size | number | No | Default 20 |
+| size | number | No | Default 20, recommended max 50 |
 | page | number | No | 0-based |
 | sort | string | No | `billingDate,desc` (default), `billingDate,asc` |
 
