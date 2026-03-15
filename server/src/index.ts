@@ -96,10 +96,21 @@ function truncateObj(obj: Record<string, unknown>, maxKeys: number): string {
 /**
  * Dump data to a temp file and return a compact summary for Claude.
  */
-function dumpAndSummarize(data: unknown, apiPath: string): string {
+function dumpAndSummarize(data: unknown, apiPath: string, requestedPageSize?: number): string {
   const slug = endpointSlug(apiPath);
   const timestamp = Date.now();
-  const filePath = join(tmpdir(), `appstle_${slug}_${timestamp}.json`);
+
+  // Include page number in filename for paginated responses
+  let pageSegment = '';
+  if (data && typeof data === 'object' && !Array.isArray(data) && 'content' in data) {
+    const pg = data as Record<string, unknown>;
+    const pageNum = pg.number ?? pg.page;
+    if (typeof pageNum === 'number' && Number.isInteger(pageNum) && pageNum >= 0) {
+      pageSegment = `_p${pageNum}`;
+    }
+  }
+
+  const filePath = join(tmpdir(), `appstle_${slug}${pageSegment}_${timestamp}.json`);
   const json = JSON.stringify(data, null, 2);
 
   writeFileSync(filePath, json, 'utf-8');
@@ -137,6 +148,12 @@ function dumpAndSummarize(data: unknown, apiPath: string): string {
       lines.push('');
       lines.push(`Fields (${keys.length}): ${keys.slice(0, 12).join(', ')}${keys.length > 12 ? ', ...' : ''}`);
       lines.push(`Sample: ${truncateObj(first, 6)}`);
+    }
+
+    // Pagination hint: when array length equals requested page size, more data likely exists
+    if (requestedPageSize !== undefined && data.length === requestedPageSize) {
+      lines.push('');
+      lines.push(`(array length = requested page size — more data likely exists. Fetch next page with page={N+1}. Keep fetching until array length < page size.)`);
     }
   } else {
     lines.push(`Single object`);
@@ -232,7 +249,7 @@ async function main() {
 
   const server = new McpServer({
     name: 'appstle-shopify',
-    version: '3.1.0',
+    version: '3.2.0',
   });
 
   server.tool(
@@ -251,7 +268,9 @@ async function main() {
         const data = await client.request<unknown>(method, path, params, body);
         const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
         if (text.length > INLINE_THRESHOLD) {
-          const summary = dumpAndSummarize(data, path);
+          const pageSize = params?.size !== undefined ? Number(params.size) : undefined;
+          const validPageSize = pageSize !== undefined && Number.isFinite(pageSize) && pageSize > 0 ? pageSize : undefined;
+          const summary = dumpAndSummarize(data, path, validPageSize);
           return { content: [{ type: 'text' as const, text: summary }] };
         }
         return { content: [{ type: 'text' as const, text }] };

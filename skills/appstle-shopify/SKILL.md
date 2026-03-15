@@ -18,6 +18,7 @@ You have access to the `appstle_api` MCP tool for authenticated Appstle Subscrip
 - **Contract IDs**: Always numeric int64
 - **Dates**: ISO 8601 with timezone: `2024-03-15T00:00:00Z`
 - **Status values**: Send lowercase to API (`active`, `paused`, `cancelled`) even though they display as uppercase
+- **Bulk operations**: See Workflow 11 for pagination-then-act pattern, rate limiting, and error handling
 
 ## Troubleshooting Setup
 
@@ -106,6 +107,11 @@ node <path-from-summary>/query.js "<file>" "SELECT COUNT(*) as cnt FROM ?" --com
 
 The exact `node` command path is included in every dump summary — copy-paste it directly.
 
+> **Reserved words**: alasql treats common words as keywords. Do NOT use these as column aliases:
+> `total`, `count`, `name`, `order`, `key`, `value`, `number`, `status`, `type`, `table`, `select`
+>
+> Use short aliases instead: `as n`, `as cnt`, `as s`, `as v`, `as t`
+
 ### Common SQL patterns by endpoint
 
 | Endpoint | Useful queries |
@@ -135,6 +141,7 @@ rm /tmp/appstle_*.json
 | Remove last line item | May cancel the subscription | Yes, warn user |
 | Remove discount | Increases customer's next charge | Yes, inform user |
 | Replace variant | Changes what customer receives next delivery | Yes, confirm swap |
+| Bulk mutations (>10 items) | **HIGH** — rate limiting, partial failures possible | Yes, confirm total count once |
 
 ### Before any modification:
 1. Always fetch the subscription first to confirm current state

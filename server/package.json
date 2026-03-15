@@ -1,6 +1,6 @@
 {
   "name": "appstle-shopify-plugin-server",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "type": "module",
   "private": true,
   "engines": {

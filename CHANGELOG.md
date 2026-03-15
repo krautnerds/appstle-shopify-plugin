@@ -2,6 +2,17 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.2.0] - 2026-03-15
+
+### Added
+- Bulk Mutations workflow (Workflow 11) with prescriptive recipes for ID collection, batching, progress reporting, rate limiting, and error handling
+- Pagination directive hint for bare array responses when array length equals requested page size
+- Page numbers in dump filenames for paginated responses (`appstle_{slug}_p{N}_{timestamp}.json`)
+- Bulk operations safety rule and Quick Reference cross-reference in skill
+
+### Changed
+- `dumpAndSummarize` accepts optional `requestedPageSize` to detect pagination boundaries
+
 ## [3.1.0] - 2026-03-15
 
 ### Added

@@ -346,6 +346,90 @@ Step 3: Summarize amounts
 
 ---
 
+## 11. Bulk Mutations
+
+**Goal**: Collect IDs across paginated results, then apply a mutation (cancel, pause, update, etc.) to each one with rate limiting, progress reporting, and error handling.
+
+### Step A: Collect IDs across pages
+
+```
+Step 1: Fetch page 0 with max page size
+→ GET /subscription-contract-details?status=active&size=50&page=0
+→ Note totalElements from summary (e.g. 827)
+→ Extract IDs from dump file:
+  Bash: node <query.js path> "<file>" "SELECT id FROM ?"
+
+Step 2: Fetch page 1
+→ GET /subscription-contract-details?status=active&size=50&page=1
+→ Extract IDs from this dump file too
+
+Step 3: Repeat for page 2, 3, ... until the returned array length < requested page size
+→ Termination rule: STOP when items on page < size parameter (e.g. page returns 27 items but size=50)
+→ Do NOT rely on totalPages — some endpoints omit it. Array length < page size is the reliable signal.
+
+Step 4: Merge all collected IDs into a single list
+→ You now have the complete ID set to mutate
+```
+
+### Step B: Execute mutations with batching and progress
+
+```
+Step 1: Confirm with user ONCE before starting
+→ "About to cancel 827 subscriptions with feedback 'store_closing'. Proceed?"
+→ Do NOT ask per-item confirmation — one confirmation for the entire batch
+
+Step 2: Process in batches of 25, reporting progress after each batch
+→ After batch 1:  "Processed 25/827 (3%)..."
+→ After batch 2:  "Processed 50/827 (6%)..."
+→ After batch 10: "Processed 250/827 (30%)..."
+
+Step 3: Rate limiting between each request
+→ Minimum 1 second delay between mutations
+→ On HTTP 429: back off starting at 3 seconds, double each retry (3s → 6s → 12s → ...)
+→ Max 5 retries per item before recording as failure
+
+Step 4: Error handling — collect failures, do NOT stop on first error
+→ If a mutation fails, record { id, error } and continue with the next item
+→ After all items processed, report failures:
+  "Completed: 819/827 succeeded, 8 failed"
+  "Failed IDs: 123, 456, 789, ... — errors: [details]"
+```
+
+### Cancel-specific recipe
+
+Bulk cancel uses `DELETE /subscription-contracts/{id}`, NOT the PUT status endpoint.
+
+```
+For each contractId in collected IDs:
+→ DELETE /subscription-contracts/{contractId}?cancellationFeedback={reason}
+→ Optional: &cancellationNote={note}
+
+Example with feedback:
+→ DELETE /subscription-contracts/12345?cancellationFeedback=store_closing&cancellationNote=Business%20closed%20March%202026
+
+Feedback options: "too_expensive", "not_needed", "switching_product", "other", or any custom string
+```
+
+### Pause-specific recipe
+
+```
+For each contractId in collected IDs:
+→ PUT /subscription-contracts-update-status?contractId={contractId}&status=PAUSED
+```
+
+### Template: progress reporting
+
+```
+Report format after every 25 mutations:
+  "Processed {done}/{total} ({percentage}%)... {failures} failures so far"
+
+Final report:
+  "Bulk {operation} complete: {succeeded}/{total} succeeded, {failed} failed"
+  If failures > 0: list each failed ID with its error message
+```
+
+---
+
 ### Remove a discount:
 ```
 Step 1: Get subscription to find discount IDs

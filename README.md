@@ -1,6 +1,6 @@
 # Appstle Subscriptions Plugin for Claude Code — Shopify Subscription Management
 
-[![Appstle Shopify Plugin Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](./server/package.json)
+[![Appstle Shopify Plugin Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](./server/package.json)
 [![Node.js Version Requirement](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED.svg)](https://docs.anthropic.com/en/docs/claude-code)
 
