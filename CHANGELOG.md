@@ -8,8 +8,13 @@ All notable changes to the appstle-shopify plugin will be documented in this fil
 - MCP server validation error ("Missing environment variables") by removing redundant `env` block from `.mcp.json`
 - `.env` file discovery now uses `CLAUDE_PLUGIN_ROOT` for reliable path resolution regardless of working directory
 
+### Added
+- `CLAUDE.md` with plugin-specific development instructions and release workflow
+- Stop hook (`.claude-plugin/hooks.json`) to enforce version sync and changelog on every session
+
 ### Changed
 - `APPSTLE_BASE_URL` default fallback moved from `.mcp.json` to `start.sh`
+- Version synced across all five locations (was missing in `index.ts` and `README.md` badge)
 
 ## [3.0.0] - 2026-03-15
 
