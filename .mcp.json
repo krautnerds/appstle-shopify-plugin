@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "appstle-shopify": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/dist/index.js"],
+      "env": {
+        "APPSTLE_API_KEY": "${APPSTLE_API_KEY}",
+        "APPSTLE_BASE_URL": "${APPSTLE_BASE_URL}"
+      }
+    }
+  }
+}
