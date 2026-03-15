@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before finishing, check if ANY of these files were modified during this session: .claude-plugin/plugin.json, server/package.json, server/src/index.ts, README.md, CHANGELOG.md, server/start.sh, server/src/client.ts, server/src/types.ts, .mcp.json\n\nIf yes, run `git diff --name-only` to confirm which files changed, then enforce this release checklist:\n\n1. VERSIONING — All five version locations MUST show the same version:\n   - `.claude-plugin/plugin.json` → `\"version\": \"X.Y.Z\"`\n   - `server/package.json` → `\"version\": \"X.Y.Z\"`\n   - `server/src/index.ts` → `version: 'X.Y.Z'` in McpServer constructor\n   - `README.md` → badge `version-X.Y.Z-blue` on line 3\n   - `CHANGELOG.md` → `## [X.Y.Z]` section exists at top\n   Determine bump type: patch for fixes, minor for features, major for breaking changes.\n   If versions are already consistent and unchanged from before the session, no bump is needed.\n\n2. CHANGELOG — If the version was bumped, `CHANGELOG.md` MUST have a new `## [X.Y.Z] - YYYY-MM-DD` section with subsections (Added/Changed/Fixed/Removed) describing what changed. Follow Keep a Changelog format.\n\n3. LOCK FILE — If `server/package.json` was modified, run `cd server && npm install` to update `package-lock.json`.\n\n4. COMMIT — Stage all changed files and commit. Use prefix `fix:` for patches, `feat:` for minor, `feat!:` for major. Do NOT add any Co-Authored-By lines to the commit message.\n\n5. TAG — Create git tag `vX.Y.Z` matching the new version.\n\n6. VERIFY — Run `git log --oneline -1` and `git tag -l 'vX.Y.Z'` to confirm.\n\nIf NO files were modified, do nothing — just respond normally."
+          }
+        ]
+      }
+    ]
+  }
+}

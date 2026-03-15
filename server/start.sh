@@ -13,7 +13,10 @@ if [ -z "$APPSTLE_API_KEY" ]; then
     "../../.env" \
     "../../../.env" \
     "$CLAUDE_PLUGIN_ROOT/../.env" \
-    "$CLAUDE_PLUGIN_ROOT/../../.env"; do
+    "$CLAUDE_PLUGIN_ROOT/../../.env" \
+    "$SCRIPT_DIR/../.env" \
+    "$SCRIPT_DIR/../../.env" \
+    "$SCRIPT_DIR/../../../.env"; do
     if [ -f "$candidate" ] && grep -q "APPSTLE_API_KEY" "$candidate" 2>/dev/null; then
       export $(grep -E '^APPSTLE_' "$candidate" | xargs)
       break

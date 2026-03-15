@@ -2,6 +2,12 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.0.2] - 2026-03-15
+
+### Fixed
+- `.env` discovery when launched by Claude Code from unknown CWD — added `SCRIPT_DIR`-relative search paths to `start.sh`
+- Stop hook not firing — moved `hooks.json` from `.claude-plugin/` to `hooks/`, fixed format to event-keyed structure, added `hooks` reference in `plugin.json`
+
 ## [3.0.1] - 2026-03-15
 
 ### Fixed
