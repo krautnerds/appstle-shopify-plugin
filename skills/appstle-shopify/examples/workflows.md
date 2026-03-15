@@ -154,6 +154,8 @@ Step 3: Identify the right payment method
 
 Step 4: Update the subscription's payment method
 → PUT /subscription-contracts-update-payment-method?contractId={id}&paymentMethodId={pmId}
+→ Alternative (gid format): PUT /subscription-contracts-update-existing-payment-method?contractId={id}&paymentMethodId=gid://shopify/CustomerPaymentMethod/{pmId}
+→ Note: use update-existing-payment-method when you have the full gid; use update-payment-method with a numeric ID
 
 Step 5: Verify change
 → GET /subscription-contracts/contract-external/{contractId}
@@ -175,6 +177,11 @@ Step 1: List available selling plans
 → GET /subscription-groups/all-selling-plans
 → OR: GET /subscription-groups (to see groups first)
 → Note: selling plan IDs and their frequencies
+
+Step 1b: (Optional) Get billing interval options for specific plans
+→ GET /subscription-contract-details/billing-interval?sellingPlanIds={id1},{id2}
+→ Returns available frequency options with pricing policy details
+→ Useful for showing the customer which frequencies are available
 
 Step 2: Get current subscription details
 → GET /subscription-contracts/contract-external/{contractId}
@@ -444,4 +451,63 @@ Final report:
   "Bulk {operation} complete: {succeeded}/{total} succeeded, {failed} failed"
   If failures > 0: list each failed ID with its error message
 ```
+
+---
+
+## 12. Create a New Subscription Contract
+
+**Goal**: Programmatically create a subscription contract for a customer.
+
+```
+Step 1: Look up the customer by email (workflow 1)
+→ GET /subscription-contract-details?customerName=customer@example.com&size=1
+→ Extract customerId from the result
+
+Step 2: Get customer's payment methods
+→ GET /subscription-contract-details/shopify/customer/{customerId}/payment-methods
+→ Note the payment method ID (gid format) — needed if customer has multiple methods
+→ If no valid payment methods: set createWithoutPaymentMethod=true (contract will be PAUSED)
+
+Step 3: CONFIRM with user
+→ "Creating subscription for {customerEmail}:
+   Product: {variantId} x {quantity}
+   Billing: every {intervalCount} {intervalType}
+   Shipping to: {address}
+   This will create a REAL subscription. Proceed?"
+
+Step 4: Build and send the create request
+→ POST /subscription-contract-details/create-subscription-contract
+→ Body:
+  {
+    "customerId": "7654321098765",
+    "nextBillingDate": "2026-04-01T00:00:00Z",
+    "status": "ACTIVE",
+    "billingIntervalType": "MONTH",
+    "billingIntervalCount": 1,
+    "deliveryFirstName": "Max",
+    "deliveryLastName": "Mustermann",
+    "deliveryAddress1": "Bahnhofstrasse 1",
+    "deliveryCity": "Zürich",
+    "deliveryCountryCode": "CH",
+    "deliveryZip": "8001",
+    "lines": [
+      {
+        "variantId": "44681299468571",
+        "quantity": 1
+      }
+    ]
+  }
+
+Step 5: Verify the new contract
+→ Extract the new contractId from the response
+→ GET /subscription-contracts/contract-external/{newContractId}
+→ Confirm status, lines, billing schedule, and shipping address
+```
+
+### Optional fields:
+- `paymentMethodId`: Required when customer has multiple payment methods
+- `createWithoutPaymentMethod: true`: Creates a PAUSED contract without payment
+- `currencyCode`: Override store default currency
+- `sellingPlanId` on lines: Associate with a selling plan for pricing policies
+- `maxCycles` / `minCycles`: Set subscription duration limits
 

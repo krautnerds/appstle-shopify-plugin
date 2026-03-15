@@ -2,6 +2,20 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.3.0] - 2026-03-15
+
+### Added
+- 11 new Tier 1 endpoints in skill documentation: create-subscription-contract, split-existing-contract, update-line-item (comprehensive), update-line-item-attributes, update-multiple-line-item-attributes, update-existing-payment-method (gid format), past-orders/report, update billing attempt, billing-interval, sync-info, upcoming one-time products
+- Workflow 12: Create a New Subscription Contract playbook
+- Response shapes for CreateContractResponse, SplitContractResponse, BillingIntervalResponse, SubscriptionContractOneOffDTO
+- Safety rules for create-subscription-contract and split-existing-contract (destructive)
+- billing-interval discovery step in Workflow 6 (Manage Selling Plan Frequency)
+- update-existing-payment-method alternative in Workflow 5 (Update Payment Method)
+
+### Changed
+- Endpoint coverage expanded from ~52 to ~63 core subscription endpoints
+- README capabilities table updated with new endpoint categories
+
 ## [3.2.1] - 2026-03-15
 
 ### Fixed

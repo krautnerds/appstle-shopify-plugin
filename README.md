@@ -1,12 +1,12 @@
 # Appstle Subscriptions Plugin for Claude Code — Shopify Subscription Management
 
-[![Appstle Shopify Plugin Version](https://img.shields.io/badge/version-3.2.1-blue.svg)](./server/package.json)
+[![Appstle Shopify Plugin Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](./server/package.json)
 [![Node.js Version Requirement](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED.svg)](https://docs.anthropic.com/en/docs/claude-code)
 
 A Claude Code plugin that connects to the Appstle Subscription API for Shopify stores. Manage Shopify subscriptions, recurring orders, billing, cancellations, payment methods, selling plans, and product swaps — all through natural language in your Claude Code session. Built on the Model Context Protocol (MCP).
 
-**Why this plugin?** The Appstle Subscription API has 22+ endpoints for managing Shopify subscription contracts. Instead of building custom integrations, this plugin lets Claude Code handle subscription lookups, billing management, order scheduling, and more through a single MCP tool — with built-in safety rules for destructive operations.
+**Why this plugin?** The Appstle Subscription API has 63+ endpoints for managing Shopify subscription contracts. Instead of building custom integrations, this plugin lets Claude Code handle subscription lookups, billing management, order scheduling, and more through a single MCP tool — with built-in safety rules for destructive operations.
 
 **Publisher**: krautnerds
 
@@ -38,7 +38,7 @@ A Claude Code plugin that connects to the Appstle Subscription API for Shopify s
 
 ## Shopify Subscription Management Features
 
-This Appstle plugin pairs a thin MCP server with an Appstle skill to give Claude full access to the Appstle Subscription API (v2). Instead of 22 rigid tools, the plugin exposes a single `appstle_api` tool for authenticated HTTP requests while the skill provides endpoint documentation, safety rules, and step-by-step workflow playbooks on demand.
+This Appstle plugin pairs a thin MCP server with an Appstle skill to give Claude full access to the Appstle Subscription API (v2). Instead of 63 rigid tools, the plugin exposes a single `appstle_api` tool for authenticated HTTP requests while the skill provides endpoint documentation, safety rules, and step-by-step workflow playbooks on demand.
 
 The result: comprehensive Appstle Shopify subscription management with near-zero token overhead in conversations that do not involve subscriptions.
 
@@ -49,13 +49,17 @@ The result: comprehensive Appstle Shopify subscription management with near-zero
 | **Customer lookup** | Search by email, validate active subscriptions, generate and send portal links |
 | **Subscription management** | List, filter, pause, resume, and cancel contracts with optional feedback |
 | **Billing and orders** | View past/upcoming orders, trigger billing, skip/unskip/reschedule, adjust intervals |
-| **Line items** | Add, remove, update quantities, set custom pricing, manage one-time add-ons |
+| **Contract creation** | Create new subscription contracts, split/duplicate existing contracts |
+| **Line items** | Add, remove, update quantities, set custom pricing, manage one-time add-ons, update attributes (single and bulk) |
 | **Pricing and discounts** | Update line prices, apply discount codes, add custom percentage discounts |
 | **Shipping** | Update delivery address and shipping method |
-| **Payment methods** | List and update payment methods on a contract |
-| **Selling plans** | List subscription groups, change frequencies, swap selling plans per line item |
+| **Payment methods** | List, update, and switch payment methods on a contract (gid format) |
+| **Selling plans** | List subscription groups, change frequencies, swap selling plans per line item, query billing intervals |
 | **Variant swaps** | Replace product variants, view swap rules and available options |
-| **Audit and analytics** | Search activity logs, retrieve revenue analytics per contract |
+| **Billing attempts** | View and update queued billing attempts |
+| **Audit and analytics** | Search activity logs, retrieve revenue analytics per contract, advanced past orders reporting |
+| **Customer sync** | Trigger Shopify→Appstle customer data synchronization |
+| **One-time products** | Query upcoming one-off products attached to a contract's next order |
 
 ## Setup — Connect Your Appstle API Key
 

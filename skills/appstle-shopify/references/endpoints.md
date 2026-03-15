@@ -75,6 +75,22 @@ GET /subscription-contract-details/customers
 | page | number | No | 0-based page number |
 | size | number | No | Results per page |
 
+### Sync customer data from Shopify
+```
+GET /subscription-customers/sync-info/{customerId}
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| customerId | number (path) | Yes | Numeric Shopify customer ID |
+
+Triggers a synchronous Shopify→Appstle data sync for the customer. Blocks until complete (1–5s typical).
+
+Returns: void / empty (side effect is the sync)
+
+Errors: 400 (invalid ID), 404 (customer not found), 429 (rate limited), 502 (Shopify API error)
+
+**Use cases**: Fix data discrepancies, refresh after manual Shopify changes, recover from webhook failures.
+
 ---
 
 ## Subscription Contract Endpoints
@@ -124,6 +140,79 @@ DELETE /subscription-contracts/{contractId}
 | cancellationNote | string | No | Free text note |
 
 **IRREVERSIBLE**: Cannot be undone.
+
+### Create subscription contract
+```
+POST /subscription-contract-details/create-subscription-contract
+```
+Body (`SubscriptionContractDTO`):
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| customerId | string | Yes | Numeric Shopify customer ID |
+| nextBillingDate | string | Yes | ISO 8601 date-time |
+| status | string | Yes | `ACTIVE` or `PAUSED` |
+| billingIntervalType | string | Yes | `DAY`, `WEEK`, `MONTH`, `YEAR` |
+| billingIntervalCount | number | Yes | Min 1 |
+| deliveryIntervalType | string | No | Defaults to billing interval |
+| deliveryIntervalCount | number | No | Defaults to billing interval count |
+| deliveryFirstName | string | Yes | |
+| deliveryLastName | string | Yes | |
+| deliveryAddress1 | string | Yes | |
+| deliveryAddress2 | string | No | |
+| deliveryCity | string | Yes | |
+| deliveryProvinceCode | string | No | |
+| deliveryZip | string | No | |
+| deliveryCountryCode | string | Yes | e.g. `US`, `CH`, `DE` |
+| deliveryPhone | string | No | |
+| deliveryPriceAmount | number | No | Shipping cost |
+| currencyCode | string | No | Defaults to store currency |
+| paymentMethodId | string | No | Defaults to customer default |
+| createWithoutPaymentMethod | boolean | No | Default false — if true, status forced to PAUSED |
+| maxCycles | number | No | |
+| minCycles | number | No | |
+| allowDeliveryAddressOverride | boolean | No | Default false |
+| allowDeliveryPriceOverride | boolean | No | Default false |
+| customAttributes | array | No | `[{ key, value }]` |
+| lines | array | Yes | See line item fields below |
+
+Line item fields (`SubscriptionContractLineDTO`):
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| variantId | string | Yes | Numeric, without gid prefix |
+| productId | string | No | |
+| quantity | number | Yes | Min 1 |
+| sellingPlanId | string | No | Full gid format |
+| currentPrice | number | No | |
+| unitPrice | number | No | |
+| customAttributes | array | No | `[{ key, value }]` |
+| linePricingPolicy | string | No | `SELLING_PLAN_PRICING_POLICY`, `CUSTOM_PRICING_POLICY`, `NO_PRICING_POLICY` |
+| pricingPolicy | array | No | AppstleCycle objects for custom pricing |
+
+Returns (201): `SubscriptionContract` — full GraphQL-style contract object
+
+Errors: 400 (missing customerId, no payment method, multiple payment methods without ID, invalid selling plan), 401, 403, 422 (Shopify API error)
+
+**DESTRUCTIVE**: Creates a real subscription that will bill the customer. Always confirm.
+
+### Split/duplicate contract
+```
+POST /subscription-contract-details/split-existing-contract
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| contractId | number (query) | Yes | Source contract ID |
+| isSplitContract | boolean (query) | No | Default false. true=move items (destructive), false=copy items |
+| attemptBilling | boolean (query) | No | Default false. true=bill the new contract immediately |
+
+Body: `string[]` — array of line item IDs to split/copy
+
+Returns (200): `SubscriptionContract` — the new contract, with `customAttributes` containing `_origin_type: SPLIT_CONTRACT` and `_original_contract_id`
+
+Errors: 400 (all products selected, contract not found, no payment method, invalid line IDs)
+
+**DESTRUCTIVE** when `isSplitContract=true` — removes items from original contract. When `attemptBilling=true`, also charges customer. Always confirm.
 
 ---
 
@@ -233,6 +322,43 @@ PUT /subscription-billing-attempts/skip-upcoming-order
 GET /subscription-contract-details/subscription-fulfillments/{contractId}
 ```
 
+### Past orders report (advanced)
+```
+GET /subscription-billing-attempts/past-orders/report
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| status | string | Yes | See status enum below |
+| contractId | number | No | Filter by contract |
+| includeShopifyException | boolean | No | Default false — include error details for failures |
+| fromDay | string | No | ISO 8601 — range start |
+| toDay | string | No | ISO 8601 — range end |
+| attemptCount | number | No | Filter by retry count |
+| contractStatus | string | No | Filter by contract status |
+| page | number | No | 0-based |
+| size | number | No | Results per page |
+| sort | string[] | No | e.g. `id,desc` |
+
+Status enum: `SUCCESS`, `FAILURE`, `REQUESTING`, `PROGRESS`, `QUEUED`, `SKIPPED`, `SOCIAL_CONNECTION_NULL`, `CONTRACT_CANCELLED`, `CONTRACT_ENDED`, `CONTRACT_PAUSED`, `AUTO_CHARGE_DISABLED`, `SHOPIFY_EXCEPTION`, `SKIPPED_DUNNING_MGMT`, `SKIPPED_INVENTORY_MGMT`, `IMMEDIATE_TRIGGERED`, `SECURITY_CHALLENGE`, `CONTRACT_PAUSED_MAX_CYCLES`, `REFUNDED`, `SKIPPED_DEMO_SHOP`, `SKIPPED_SHOP_INFO_NOT_FOUND`, `SKIPPED_BILLING_DATE_STALE`, `SKIPPED_DUNNING_NOT_CONFIGURED`
+
+Returns: `SubscriptionBillingAttemptDetails[]` — same shape as BillingAttempt but may include additional fields when `includeShopifyException=true`
+
+### Update billing attempt
+```
+PUT /subscription-billing-attempts
+```
+Body (`SubscriptionBillingAttemptDTO`):
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| id | number | Yes | Billing attempt ID |
+| billingDate | string | No | New billing date (ISO 8601) |
+| orderNote | string | No | Order note |
+
+Returns (200): Updated `SubscriptionBillingAttemptDTO`
+
+**Constraint**: Only QUEUED billing attempts can be modified.
+
 ---
 
 ## Line Item Endpoints
@@ -293,6 +419,61 @@ PUT /subscription-contracts-update-line-item-quantity
 | lineId | string | Yes | |
 | quantity | number | Yes | |
 
+### Update line item (comprehensive)
+```
+PUT /subscription-contracts-update-line-item
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| contractId | number (query) | Yes | |
+| lineId | string (query) | Yes | Full gid format |
+| quantity | number (query) | No | 1–9999 |
+| variantId | string (query) | No | gid format — changes the product |
+| price | number (query) | No | 0.01–999999.99 |
+| isPricePerUnit | boolean (query) | No | Default false. For prepaid: true=per delivery, false=per billing period |
+| sellingPlanName | string (query) | No | Max 255 chars — update by plan name |
+
+Returns (200): `SubscriptionContract` with updated lines. May return 207 for partial success.
+
+Only provide params you want to change. Updates apply in order: selling plan → price → quantity → variant.
+
+**Note**: This is the "swiss army knife" version of the individual update-quantity/update-price endpoints.
+
+### Update line item attributes
+```
+PUT /subscription-contracts-update-line-item-attributes
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| contractId | number (query) | Yes | |
+| lineId | string (query) | Yes | gid format |
+
+Body: `AttributeInfo[]` — `[{ "key": "color", "value": "red" }]`
+
+Returns (200): `SubscriptionContract`
+
+Errors: 400, 404 (line item not found), 422 (constraint violation)
+
+### Update multiple line item attributes (bulk)
+```
+PUT /subscription-contracts-update-multiple-line-item-attributes
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| contractId | number (query) | Yes | |
+
+Body: `Record<string, AttributeInfo[]>` — keys are line item GIDs:
+```json
+{
+  "gid://shopify/SubscriptionLineItem/123": [{ "key": "color", "value": "red" }],
+  "gid://shopify/SubscriptionLineItem/456": [{ "key": "size", "value": "L" }]
+}
+```
+
+Returns (200): `SubscriptionContract`
+
+Errors: 400, 404 (contract or line item not found), 422
+
 ---
 
 ## One-Time Product Endpoints
@@ -323,6 +504,20 @@ DELETE /subscription-contract-one-offs-by-contractId-and-billing-attempt-id
 | contractId | number | Yes | Query param |
 | billingAttemptId | number | Yes | |
 | variantId | string | Yes | |
+
+### List upcoming one-time products (next order only)
+```
+GET /upcoming-subscription-contract-one-offs-by-contractId
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| contractId | number (query) | Yes | |
+
+Returns (200): `SubscriptionContractOneOffDTO[]` — one-time products for the NEXT upcoming order only.
+
+Returns empty array if no queued billing attempts exist.
+
+**Difference from `/subscription-contract-one-offs-by-contractId`**: That endpoint returns ALL one-time products across all future orders. This one returns ONLY those for the next delivery.
 
 ---
 
@@ -409,7 +604,22 @@ Returns: `PaymentMethodListItem[]`
 ```
 PUT /subscription-contracts-update-payment-method
 ```
-Query: `contractId, paymentMethodId`
+Query: `contractId, paymentMethodId` (numeric ID)
+
+### Update existing payment method (gid format)
+```
+PUT /subscription-contracts-update-existing-payment-method
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| contractId | number (query) | Yes | |
+| paymentMethodId | string (query) | Yes | Full gid format: `gid://shopify/CustomerPaymentMethod/{id}`. Must be valid, non-expired, non-revoked |
+
+Returns (200): `{ "message": "Payment method updated successfully" }`
+
+Errors: 400 (invalid/expired/revoked payment method, contract not found), 422 (pending charges block update)
+
+**Note**: Difference from `update-payment-method` — this endpoint takes a gid-format `paymentMethodId` and works through Shopify's draft system. The existing `update-payment-method` takes a numeric ID.
 
 ---
 
@@ -492,6 +702,20 @@ Query: `contractId, sellingPlanId`
 PUT /subscription-contracts-update-line-item-selling-plan
 ```
 Query: `contractId, lineId, sellingPlanId`
+
+### Get billing interval options
+```
+GET /subscription-contract-details/billing-interval
+```
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| sellingPlanIds | string (query) | Yes | Comma-separated selling plan IDs |
+
+Returns (200): Array of frequency options with `id`, `frequencyName`, `interval`, `intervalCount`, `deliveryInterval`, `deliveryIntervalCount`, and `pricingPolicy` (adjustmentType + adjustmentValue).
+
+Returns empty array `[]` if no plans found (not an error).
+
+**Use case**: Populate frequency selector UIs, show available billing options for a selling plan.
 
 ---
 

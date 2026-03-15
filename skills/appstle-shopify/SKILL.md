@@ -143,6 +143,8 @@ rm /tmp/appstle_*.json
 | Remove last line item | May cancel the subscription | Yes, warn user |
 | Remove discount | Increases customer's next charge | Yes, inform user |
 | Replace variant | Changes what customer receives next delivery | Yes, confirm swap |
+| Create contract | Creates a real subscription that will bill customer | Yes, always |
+| Split contract (move) | Removes items from original contract when `isSplitContract=true` | Yes, always |
 | Bulk mutations (>10 items) | **HIGH** — rate limiting, partial failures possible | Yes, confirm total count once |
 
 ### Before any modification:
@@ -166,6 +168,7 @@ For step-by-step workflow playbooks, read `examples/workflows.md`.
 | Validate active | GET | `/subscription-customers/valid/{customerId}` |
 | Validate detailed | GET | `/subscription-customers-detail/valid/{customerId}` |
 | List all customers | GET | `/subscription-contract-details/customers?page=0&size=20` |
+| Sync customer data | GET | `/subscription-customers/sync-info/{customerId}` |
 
 ### Subscriptions
 | Action | Method | Path |
@@ -176,6 +179,8 @@ For step-by-step workflow playbooks, read `examples/workflows.md`.
 | Resume | PUT | `/subscription-contracts-update-status?contractId={id}&status=ACTIVE` |
 | Cancel (simple) | PUT | `/subscription-contracts-update-status?contractId={id}&status=CANCELLED` |
 | Cancel (with feedback) | DELETE | `/subscription-contracts/{contractId}?cancellationFeedback=...` |
+| Create contract | POST | `/subscription-contract-details/create-subscription-contract` |
+| Split/duplicate | POST | `/subscription-contract-details/split-existing-contract?contractId={id}&isSplitContract=true` |
 
 ### Billing & Orders
 | Action | Method | Path |
@@ -194,6 +199,8 @@ For step-by-step workflow playbooks, read `examples/workflows.md`.
 | Reschedule order | PUT | `/subscription-billing-attempts/reschedule-order/{billingAttemptId}?billingDate=...` |
 | Skip upcoming | PUT | `/subscription-billing-attempts/skip-upcoming-order?subscriptionContractId={id}` |
 | Fulfillments | GET | `/subscription-contract-details/subscription-fulfillments/{contractId}` |
+| Past orders report | GET | `/subscription-billing-attempts/past-orders/report?status=SUCCESS&page=0&size=20` |
+| Update billing attempt | PUT | `/subscription-billing-attempts` |
 
 ### Line Items & Products
 | Action | Method | Path | Params/Body |
@@ -204,9 +211,13 @@ For step-by-step workflow playbooks, read `examples/workflows.md`.
 | Remove item | PUT | `/subscription-contracts-remove-line-item` | Query: `contractId, lineId, removeDiscount` |
 | Remove multiple | PUT | `/subscription-contracts-remove-line-items` | Query: `contractId, removeDiscount`, Body: lineIds array |
 | Update quantity | PUT | `/subscription-contracts-update-line-item-quantity` | Query: `contractId, lineId, quantity` |
+| Update line item (multi) | PUT | `/subscription-contracts-update-line-item?contractId={id}&lineId={lid}` | Query: `contractId, lineId` + optional `quantity, price, variantId, sellingPlanName` |
+| Set line attributes | PUT | `/subscription-contracts-update-line-item-attributes?contractId={id}&lineId={lid}` | Query: `contractId, lineId`, Body: attributes array |
+| Set attributes (bulk) | PUT | `/subscription-contracts-update-multiple-line-item-attributes?contractId={id}` | Query: `contractId`, Body: line-keyed map |
 | List one-time | GET | `/subscription-contract-one-offs-by-contractId?contractId={id}` |
 | Add one-time | PUT | `/subscription-contract-one-offs-by-contractId-and-billing-attempt-id` | Query: all params |
 | Remove one-time | DELETE | `/subscription-contract-one-offs-by-contractId-and-billing-attempt-id` | Query: `contractId, billingAttemptId, variantId` |
+| Upcoming one-time | GET | `/upcoming-subscription-contract-one-offs-by-contractId?contractId={id}` | Next order only |
 
 ### Pricing & Discounts
 | Action | Method | Path |
@@ -229,6 +240,7 @@ For step-by-step workflow playbooks, read `examples/workflows.md`.
 |--------|--------|------|
 | List methods | GET | `/subscription-contract-details/shopify/customer/{customerId}/payment-methods` |
 | Update method | PUT | `/subscription-contracts-update-payment-method?contractId={id}&paymentMethodId={pmId}` |
+| Update existing method | PUT | `/subscription-contracts-update-existing-payment-method?contractId={id}&paymentMethodId=gid://...` |
 
 ### Notes
 | Action | Method | Path |
@@ -250,6 +262,7 @@ For step-by-step workflow playbooks, read `examples/workflows.md`.
 | List all plans | GET | `/subscription-groups/all-selling-plans` |
 | Change frequency | PUT | `/subscription-contracts-update-frequency-by-selling-plan?contractId={id}&sellingPlanId={spId}` |
 | Change line plan | PUT | `/subscription-contracts-update-line-item-selling-plan?contractId={id}&lineId={lid}&sellingPlanId={spId}` |
+| Get billing intervals | GET | `/subscription-contract-details/billing-interval?sellingPlanIds=123,456` |
 
 ### Variant Swaps
 | Action | Method | Path | Notes |

@@ -233,6 +233,87 @@ Status values: `SUCCESS`, `FAILURE`, `QUEUED`, `SKIPPED`, `PROGRESS`, `REQUESTIN
 
 ---
 
+## CreateContractResponse (from `create-subscription-contract`)
+
+Same `SubscriptionContract` shape as `contract-external` — a full GraphQL-style contract object with lines, customer, payment method, shipping address, billing/delivery policies.
+
+Returns HTTP 201 on success.
+
+---
+
+## SplitContractResponse (from `split-existing-contract`)
+
+Same `SubscriptionContract` shape as `contract-external`, but the new contract includes origin metadata in `customAttributes`:
+
+```json
+{
+  "id": "gid://shopify/SubscriptionContract/999999",
+  "status": "ACTIVE",
+  "customAttributes": [
+    { "key": "_origin_type", "value": "SPLIT_CONTRACT" },
+    { "key": "_original_contract_id", "value": "123456" }
+  ],
+  "lines": {
+    "nodes": [
+      {
+        "id": "gid://shopify/SubscriptionLine/111",
+        "title": "Protein Powder",
+        "variantTitle": "Chocolate 1kg",
+        "quantity": 1,
+        "currentPrice": { "amount": "49.90", "currencyCode": "CHF" }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## BillingIntervalResponse (from `billing-interval`)
+
+```json
+[
+  {
+    "id": "123456",
+    "frequencyName": "Every 2 Weeks",
+    "interval": "WEEK",
+    "intervalCount": 2,
+    "deliveryInterval": "WEEK",
+    "deliveryIntervalCount": 2,
+    "pricingPolicy": {
+      "adjustmentType": "PERCENTAGE",
+      "adjustmentValue": "10.0"
+    }
+  }
+]
+```
+
+Returns empty array `[]` if no plans found.
+
+---
+
+## SubscriptionContractOneOffDTO (from one-time endpoints)
+
+```json
+{
+  "id": 12345,
+  "shop": "example-shop.myshopify.com",
+  "contractId": 67890,
+  "billingAttemptId": 11111,
+  "variantId": 22222,
+  "quantity": 2,
+  "productTitle": "Coffee Filters - Pack of 100",
+  "variantTitle": "Standard Size",
+  "image": "https://cdn.shopify.com/.../filter.jpg",
+  "price": "9.99",
+  "currencyCode": "USD"
+}
+```
+
+Returned as an array from both `/subscription-contract-one-offs-by-contractId` (all future orders) and `/upcoming-subscription-contract-one-offs-by-contractId` (next order only).
+
+---
+
 ## SubscriptionGroup / SellingPlan
 
 ```json

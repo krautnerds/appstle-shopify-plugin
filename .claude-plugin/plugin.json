@@ -1,7 +1,7 @@
 {
   "name": "appstle-shopify",
   "description": "Appstle Subscription API integration for Shopify stores — customer lookup, billing management, cancellations, payment methods, selling plans, and more",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "author": {
     "name": "krautnerds"
   }
