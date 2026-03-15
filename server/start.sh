@@ -6,18 +6,24 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # If APPSTLE_API_KEY is not in environment, try loading from .env files
 if [ -z "$APPSTLE_API_KEY" ]; then
-  # Search order: current dir → parent dirs (covers most project layouts)
+  # Search order: CWD relatives → CLAUDE_PLUGIN_ROOT relatives → script-relative
   for candidate in \
     ".env" \
     "../.env" \
     "../../.env" \
-    "../../../.env"; do
+    "../../../.env" \
+    "$CLAUDE_PLUGIN_ROOT/../.env" \
+    "$CLAUDE_PLUGIN_ROOT/../../.env"; do
     if [ -f "$candidate" ] && grep -q "APPSTLE_API_KEY" "$candidate" 2>/dev/null; then
       export $(grep -E '^APPSTLE_' "$candidate" | xargs)
       break
     fi
   done
 fi
+
+# Default APPSTLE_BASE_URL if not set (previously in .mcp.json env block)
+APPSTLE_BASE_URL="${APPSTLE_BASE_URL:-https://subscription-admin.appstle.com}"
+export APPSTLE_BASE_URL
 
 if [ -z "$APPSTLE_API_KEY" ]; then
   echo "[appstle-shopify] ERROR: APPSTLE_API_KEY not found." >&2

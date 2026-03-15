@@ -2,11 +2,7 @@
   "mcpServers": {
     "appstle-shopify": {
       "command": "bash",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server/start.sh"],
-      "env": {
-        "APPSTLE_API_KEY": "${APPSTLE_API_KEY:-}",
-        "APPSTLE_BASE_URL": "${APPSTLE_BASE_URL:-https://subscription-admin.appstle.com}"
-      }
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/start.sh"]
     }
   }
 }
