@@ -96,7 +96,7 @@ function truncateObj(obj: Record<string, unknown>, maxKeys: number): string {
 /**
  * Dump data to a temp file and return a compact summary for Claude.
  */
-function dumpAndSummarize(data: unknown, apiPath: string, requestedPageSize?: number): string {
+function dumpAndSummarize(data: unknown, apiPath: string, requestedPageSize?: number, requestedPage?: number): string {
   const slug = endpointSlug(apiPath);
   const timestamp = Date.now();
 
@@ -108,6 +108,10 @@ function dumpAndSummarize(data: unknown, apiPath: string, requestedPageSize?: nu
     if (typeof pageNum === 'number' && Number.isInteger(pageNum) && pageNum >= 0) {
       pageSegment = `_p${pageNum}`;
     }
+  }
+  // Fallback: use requestedPage from query params for bare array responses
+  if (!pageSegment && typeof requestedPage === 'number' && Number.isInteger(requestedPage) && requestedPage >= 0) {
+    pageSegment = `_p${requestedPage}`;
   }
 
   const filePath = join(tmpdir(), `appstle_${slug}${pageSegment}_${timestamp}.json`);
@@ -195,6 +199,8 @@ function loadEnvFile(): void {
   }
 
   const candidates: string[] = [
+    // Explicit override via APPSTLE_ENV_PATH
+    ...(process.env.APPSTLE_ENV_PATH ? [resolve(process.env.APPSTLE_ENV_PATH)] : []),
     // CWD-relative
     resolve(cwd, '.env'),
     resolve(cwd, '..', '.env'),
@@ -210,10 +216,8 @@ function loadEnvFile(): void {
     resolve(scriptDir, '..', '..', '..', '.env'),
     // Git root
     ...(gitRoot ? [resolve(gitRoot, '.env')] : []),
-    // $HOME fallbacks
-    ...(home
-      ? [resolve(home, 'Work', 'eisenhorn', 'eisenhorn-astro', '.env'), resolve(home, '.env')]
-      : []),
+    // $HOME fallback
+    ...(home ? [resolve(home, '.env')] : []),
   ];
 
   for (const candidate of candidates) {
@@ -249,7 +253,7 @@ async function main() {
 
   const server = new McpServer({
     name: 'appstle-shopify',
-    version: '3.2.0',
+    version: '3.2.1',
   });
 
   server.tool(
@@ -270,7 +274,9 @@ async function main() {
         if (text.length > INLINE_THRESHOLD) {
           const pageSize = params?.size !== undefined ? Number(params.size) : undefined;
           const validPageSize = pageSize !== undefined && Number.isFinite(pageSize) && pageSize > 0 ? pageSize : undefined;
-          const summary = dumpAndSummarize(data, path, validPageSize);
+          const pageNum = params?.page !== undefined ? Number(params.page) : undefined;
+          const validPage = pageNum !== undefined && Number.isFinite(pageNum) && pageNum >= 0 ? pageNum : undefined;
+          const summary = dumpAndSummarize(data, path, validPageSize, validPage);
           return { content: [{ type: 'text' as const, text: summary }] };
         }
         return { content: [{ type: 'text' as const, text }] };

@@ -2,6 +2,19 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.2.1] - 2026-03-15
+
+### Fixed
+- Replaced hardcoded developer-specific `.env` fallback path with `APPSTLE_ENV_PATH` environment variable override
+- `--limit 0` now works as unlimited in `query.js` (was rejected as invalid)
+- Bare array endpoints now include page number in dump filenames when `page` param is passed (e.g. `_p2_`)
+- Orphaned "Remove a discount" workflow section relocated from after Workflow 11 into Workflow 9 where it belongs
+
+### Changed
+- Clarified bulk cancel documentation: both `DELETE` (with feedback) and `PUT` (without) are valid approaches
+- Added `totalElements` availability caveat in Workflow 11 for bare-array endpoints
+- Documented `--limit` default (100 rows) and `--limit 0` for unlimited output in SKILL.md
+
 ## [3.2.0] - 2026-03-15
 
 ### Added

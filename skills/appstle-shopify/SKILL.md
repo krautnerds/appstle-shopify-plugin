@@ -68,7 +68,7 @@ appstle_api({ method: "POST", path: "/api/external/v2/subscription-contract-deta
 
 9. **Rate limiting**: ~2 req/sec max. Bursting triggers 429s with long cooldown (minutes). For bulk operations use sequential requests with ≥1s delay. Exponential backoff on 429s (start 3s, double each retry).
 
-10. **Cancel is DELETE**: Cancel with feedback uses `DELETE /subscription-contracts/{contractId}` with query params, not the PUT status endpoint.
+10. **Cancel is DELETE for feedback**: Cancel with feedback uses `DELETE /subscription-contracts/{contractId}`. Simple cancel via `PUT .../update-status?status=CANCELLED` also works but cannot attach a reason.
 
 11. **Sort field names are snake_case**: `created_at,desc`, `billingDate,desc`, `createAt,desc` (activity logs).
 
@@ -106,6 +106,8 @@ node <path-from-summary>/query.js "<file>" "SELECT COUNT(*) as cnt FROM ?" --com
 ```
 
 The exact `node` command path is included in every dump summary — copy-paste it directly.
+
+> **Row limit**: Results are capped at 100 rows by default. Use `--limit N` to change, or `--limit 0` for unlimited output.
 
 > **Reserved words**: alasql treats common words as keywords. Do NOT use these as column aliases:
 > `total`, `count`, `name`, `order`, `key`, `value`, `number`, `status`, `type`, `table`, `select`

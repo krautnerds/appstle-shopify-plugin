@@ -8,6 +8,9 @@
  * Examples:
  *   node dist/query.js /tmp/appstle_contracts_17105.json "SELECT status, COUNT(*) as n FROM ? GROUP BY status"
  *   node dist/query.js /tmp/appstle_contracts_17105.json "SELECT id, customerEmail FROM ? WHERE status = 'ACTIVE'" --limit 20
+ *
+ * Note: alasql reserves common words (total, count, name, order, key, value, number, status, type, table, select).
+ * Use short aliases: as n, as cnt, as s, as v, as t.
  */
 
 import { readFileSync } from 'node:fs';
@@ -29,7 +32,7 @@ function parseArgs(argv: string[]): { filePath: string; sql: string; compact: bo
       compact = true;
     } else if (args[i] === '--limit' && i + 1 < args.length) {
       limit = parseInt(args[i + 1], 10);
-      if (isNaN(limit) || limit < 1) fatal('--limit must be a positive integer');
+      if (isNaN(limit) || limit < 0) fatal('--limit must be a non-negative integer (0 = unlimited)');
       i++;
     } else {
       positional.push(args[i]);
@@ -37,7 +40,7 @@ function parseArgs(argv: string[]): { filePath: string; sql: string; compact: bo
   }
 
   if (positional.length < 2) {
-    fatal('Usage: node query.js <json-file> "<sql-query>" [--compact] [--limit N]');
+    fatal('Usage: node query.js <json-file> "<sql-query>" [--compact] [--limit N] (0 = unlimited)');
   }
 
   return { filePath: positional[0], sql: positional[1], compact, limit };
@@ -96,13 +99,16 @@ function main(): void {
     const columns = getColumnNames(data);
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`SQL Error: ${msg}`);
+    if (/expecting.*literal/i.test(msg) || /got\s+'[A-Z]+'/i.test(msg)) {
+      console.error(`\nHint: alasql reserves some words (e.g. total, count, name, order, key, value). Use short aliases: COUNT(*) as n, SUM(x) as s`);
+    }
     console.error(`\nAvailable columns (${columns.length}): ${columns.join(', ')}`);
     console.error(`Row count: ${data.length}`);
     process.exit(1);
   }
 
   // Apply limit
-  if (Array.isArray(result) && result.length > limit) {
+  if (limit > 0 && Array.isArray(result) && result.length > limit) {
     const total = result.length;
     result = result.slice(0, limit);
     console.error(`[Showing ${limit} of ${total} rows. Use --limit N to adjust.]`);

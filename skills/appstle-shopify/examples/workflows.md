@@ -294,6 +294,22 @@ Step 3: Verify
 ```
 Note: `percentage` and `amount` are mutually exclusive.
 
+### Remove a discount:
+```
+Step 1: Get subscription to find discount IDs
+→ GET /subscription-contracts/contract-external/{contractId}
+→ Look in discounts.nodes for the discount ID
+
+Step 2: Confirm with user (removing increases their next charge)
+
+Step 3: Remove
+→ PUT /subscription-contracts-remove-discount?contractId={id}&discountId={did}
+
+Step 4: Verify
+→ GET /subscription-contracts/contract-external/{contractId}
+→ Confirm discount no longer in discounts.nodes
+```
+
 ---
 
 ## 10. Bulk Data Extraction with SQL
@@ -355,7 +371,7 @@ Step 3: Summarize amounts
 ```
 Step 1: Fetch page 0 with max page size
 → GET /subscription-contract-details?status=active&size=50&page=0
-→ Note totalElements from summary (e.g. 827)
+→ Note totalElements from summary (e.g. 827). Not all endpoints include this — for bare-array endpoints, rely on the termination rule in Step 3.
 → Extract IDs from dump file:
   Bash: node <query.js path> "<file>" "SELECT id FROM ?"
 
@@ -397,7 +413,8 @@ Step 4: Error handling — collect failures, do NOT stop on first error
 
 ### Cancel-specific recipe
 
-Bulk cancel uses `DELETE /subscription-contracts/{id}`, NOT the PUT status endpoint.
+Bulk cancel prefers `DELETE /subscription-contracts/{id}` to attach cancellation feedback/notes.
+`PUT /subscription-contracts-update-status?contractId={id}&status=CANCELLED` also works but cannot record a reason.
 
 ```
 For each contractId in collected IDs:
@@ -428,20 +445,3 @@ Final report:
   If failures > 0: list each failed ID with its error message
 ```
 
----
-
-### Remove a discount:
-```
-Step 1: Get subscription to find discount IDs
-→ GET /subscription-contracts/contract-external/{contractId}
-→ Look in discounts.nodes for the discount ID
-
-Step 2: Confirm with user (removing increases their next charge)
-
-Step 3: Remove
-→ PUT /subscription-contracts-remove-discount?contractId={id}&discountId={did}
-
-Step 4: Verify
-→ GET /subscription-contracts/contract-external/{contractId}
-→ Confirm discount no longer in discounts.nodes
-```

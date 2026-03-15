@@ -71,7 +71,7 @@ skills/appstle-shopify/
 
 7. **Auto-bootstrap in `start.sh`**: If `dist/index.js` is missing (e.g. plugin cache has no compiled JS), `start.sh` auto-runs `npm install && npm run build`. First launch takes ~5-10s extra. This is the only responsibility of `start.sh` — env loading is handled by Node.
 
-8. **Hardcoded `.env` fallback path**: `loadEnvFile()` in `index.ts` contains a developer-specific fallback path (`~/Work/eisenhorn/eisenhorn-astro/.env`). This works for the original dev environment but won't help other contributors — they should set `APPSTLE_API_KEY` in their shell or a project-local `.env`.
+8. **`APPSTLE_ENV_PATH` override**: Set `APPSTLE_ENV_PATH` to point at an `.env` file outside the normal search paths. It's checked first, before CWD-relative and other candidates. Contributors who keep their key in a non-standard location should `export APPSTLE_ENV_PATH=/path/to/.env`.
 
 9. **Auto-dump for large responses**: API responses >4KB are written to `/tmp/appstle_{slug}_{timestamp}.json` and a compact summary is returned to Claude instead of the full JSON. This keeps Claude's context lean while preserving all data. Dump files older than 2 hours are cleaned up on server startup. Query dump files with: `node server/dist/query.js <file> "<SQL>"`.
 
@@ -83,6 +83,7 @@ skills/appstle-shopify/
 |----------|----------|---------|-----------|
 | `APPSTLE_API_KEY` | Yes | — | `index.ts` via dotenv from `.env` or shell |
 | `APPSTLE_BASE_URL` | No | `https://subscription-admin.appstle.com` | `index.ts` fallback |
+| `APPSTLE_ENV_PATH` | No | — | Explicit path to `.env` file; checked first by `loadEnvFile()` |
 
 ## Release Workflow
 
