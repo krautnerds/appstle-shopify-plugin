@@ -1,10 +1,12 @@
-# Appstle Shopify Plugin for Claude Code
+# Appstle Subscriptions Plugin for Claude Code — Shopify Subscription Management
 
-[![Version](https://img.shields.io/badge/version-3.0.6-blue.svg)](./server/package.json)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
+[![Appstle Shopify Plugin Version](https://img.shields.io/badge/version-3.0.6-blue.svg)](./server/package.json)
+[![Node.js Version Requirement](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED.svg)](https://docs.anthropic.com/en/docs/claude-code)
 
-A Claude Code plugin for Appstle API integration with Shopify stores. Enables natural-language Shopify subscription management -- customer lookup, billing, cancellations, payment methods, selling plans, and variant swaps -- directly from your Claude Code session.
+A Claude Code plugin that connects to the Appstle Subscription API for Shopify stores. Manage Shopify subscriptions, recurring orders, billing, cancellations, payment methods, selling plans, and product swaps — all through natural language in your Claude Code session. Built on the Model Context Protocol (MCP).
+
+**Why this plugin?** The Appstle Subscription API has 22+ endpoints for managing Shopify subscription contracts. Instead of building custom integrations, this plugin lets Claude Code handle subscription lookups, billing management, order scheduling, and more through a single MCP tool — with built-in safety rules for destructive operations.
 
 **Publisher**: krautnerds
 
@@ -34,7 +36,7 @@ A Claude Code plugin for Appstle API integration with Shopify stores. Enables na
 5. Try it:
    > "Look up subscriptions for customer@example.com"
 
-## What It Does
+## Shopify Subscription Management Features
 
 This Appstle plugin pairs a thin MCP server with an Appstle skill to give Claude full access to the Appstle Subscription API (v2). Instead of 22 rigid tools, the plugin exposes a single `appstle_api` tool for authenticated HTTP requests while the skill provides endpoint documentation, safety rules, and step-by-step workflow playbooks on demand.
 
@@ -55,7 +57,7 @@ The result: comprehensive Appstle Shopify subscription management with near-zero
 | **Variant swaps** | Replace product variants, view swap rules and available options |
 | **Audit and analytics** | Search activity logs, retrieve revenue analytics per contract |
 
-## Setup
+## Setup — Connect Your Appstle API Key
 
 ### Option A: Project `.env` file (recommended)
 
@@ -127,7 +129,7 @@ appstle-shopify-plugin/
 
 **Skill** (`skills/appstle-shopify/`): Loaded by Claude Code on demand when subscription-related topics are detected. Contains the endpoint catalog, critical API quirks, safety rules for destructive operations, and workflow playbooks. This keeps context usage near zero until the skill is actually needed.
 
-## Usage Examples
+## Usage Examples — Natural Language Subscription Commands
 
 The skill activates automatically when you mention subscriptions, Appstle, billing, recurring orders, or customer subscription management. You can also invoke it directly:
 
@@ -154,7 +156,7 @@ The skill activates automatically when you mention subscriptions, Appstle, billi
 
 Claude will use the `appstle_api` tool with the correct endpoint, parameters, and safety checks -- all guided by the skill's documentation.
 
-## Skill Reference
+## Appstle API Reference
 
 The skill contains three reference documents for detailed API work:
 
@@ -203,6 +205,10 @@ See [CHANGELOG.md](./CHANGELOG.md) for the full release history.
 | **3.0.x** | Plugin architecture -- thin MCP server (1 tool) with skill for endpoint docs and workflows. Migrated from 22-tool MCP server. |
 | **2.0.0** | 22 tools covering the full Appstle Subscription API |
 | **1.0.0** | Initial release with 14 tools |
+
+---
+
+If this plugin saves you time managing Shopify subscriptions, consider giving it a star!
 
 ## License
 
