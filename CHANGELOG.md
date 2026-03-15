@@ -2,6 +2,15 @@
 
 All notable changes to the appstle-shopify plugin will be documented in this file.
 
+## [3.0.4] - 2026-03-15
+
+### Removed
+- Dev-only release checklist hook (`hooks/hooks.json`) — caused duplicate hook errors and is redundant with CLAUDE.md release workflow
+- `hooks` key from `plugin.json`
+
+### Changed
+- README version history now links to CHANGELOG.md for full release details
+
 ## [3.0.3] - 2026-03-15
 
 ### Fixed

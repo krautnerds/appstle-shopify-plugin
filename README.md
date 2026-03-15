@@ -1,6 +1,6 @@
 # Appstle Shopify Plugin for Claude Code
 
-[![Version](https://img.shields.io/badge/version-3.0.3-blue.svg)](./server/package.json)
+[![Version](https://img.shields.io/badge/version-3.0.4-blue.svg)](./server/package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED.svg)](https://docs.anthropic.com/en/docs/claude-code)
 
@@ -196,9 +196,11 @@ The skill enforces a fetch-confirm-execute-verify pattern: always read current s
 
 ## Version History
 
-| Version | Changes |
-|---------|---------|
-| **3.0.0** | Plugin architecture -- thin MCP server (1 tool) with skill for endpoint docs and workflows. Migrated from 22-tool MCP server. |
+See [CHANGELOG.md](./CHANGELOG.md) for the full release history.
+
+| Version | Highlights |
+|---------|------------|
+| **3.0.x** | Plugin architecture -- thin MCP server (1 tool) with skill for endpoint docs and workflows. Migrated from 22-tool MCP server. |
 | **2.0.0** | 22 tools covering the full Appstle Subscription API |
 | **1.0.0** | Initial release with 14 tools |
 

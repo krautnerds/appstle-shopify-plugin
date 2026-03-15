@@ -31,7 +31,7 @@ async function main() {
 
   const server = new McpServer({
     name: 'appstle-shopify',
-    version: '3.0.3',
+    version: '3.0.4',
   });
 
   server.tool(
