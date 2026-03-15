@@ -8,6 +8,32 @@ A Claude Code plugin for Appstle API integration with Shopify stores. Enables na
 
 **Publisher**: krautnerds
 
+## Quickstart
+
+1. Add the krautnerds marketplace:
+   ```
+   /plugin marketplace add krautnerds/claude-marketplace
+   ```
+
+2. Install the plugin:
+   ```
+   /plugin install appstle-shopify@krautnerds
+   ```
+
+3. Add your Appstle API key to your project `.env`:
+   ```
+   APPSTLE_API_KEY=your-key-here
+   ```
+
+4. Restart Claude Code, then verify:
+   ```
+   /mcp
+   ```
+   You should see `appstle-shopify` with a green status.
+
+5. Try it:
+   > "Look up subscriptions for customer@example.com"
+
 ## What It Does
 
 This Appstle plugin pairs a thin MCP server with an Appstle skill to give Claude full access to the Appstle Subscription API (v2). Instead of 22 rigid tools, the plugin exposes a single `appstle_api` tool for authenticated HTTP requests while the skill provides endpoint documentation, safety rules, and step-by-step workflow playbooks on demand.
@@ -29,6 +55,50 @@ The result: comprehensive Appstle Shopify subscription management with near-zero
 | **Variant swaps** | Replace product variants, view swap rules and available options |
 | **Audit and analytics** | Search activity logs, retrieve revenue analytics per contract |
 
+## Setup
+
+### Option A: Project `.env` file (recommended)
+
+Add to your project's `.env` file:
+
+```
+APPSTLE_API_KEY=your-appstle-api-key
+```
+
+The plugin automatically loads `APPSTLE_*` variables from `.env` files in your project directory.
+
+### Option B: Shell environment
+
+Export directly in your shell profile (`~/.zshrc` or `~/.bashrc`):
+
+```bash
+export APPSTLE_API_KEY=your-appstle-api-key
+```
+
+### Getting your API key
+
+1. Open your Shopify admin → Apps → Appstle Subscriptions
+2. Go to Settings → API
+3. Copy your API key
+4. Add it to your `.env` file or shell environment
+
+### Configuration
+
+| Variable | Required | Default |
+|----------|----------|---------|
+| `APPSTLE_API_KEY` | Yes | -- |
+| `APPSTLE_BASE_URL` | No | `https://subscription-admin.appstle.com` |
+
+### Verify it works
+
+After setup, restart Claude Code and check the MCP status:
+
+```
+/mcp
+```
+
+You should see `appstle-shopify` listed with a green status.
+
 ## Architecture
 
 ```
@@ -37,6 +107,7 @@ appstle-shopify-plugin/
     plugin.json            # Plugin manifest (name, version, author)
   .mcp.json                # MCP server registration for Claude Code
   server/
+    start.sh               # Shell wrapper — loads .env, starts server
     src/
       index.ts             # MCP server entry point (stdio transport)
       client.ts            # HTTP client with X-API-Key auth
@@ -52,42 +123,9 @@ appstle-shopify-plugin/
         workflows.md       # Step-by-step playbooks for common tasks
 ```
 
-**MCP server** (`server/`): A single-tool MCP server that handles authentication and HTTP transport. The tool (`appstle_api`) accepts a method, path, optional query params, and optional body. It forwards the request to the Appstle API with proper `X-API-Key` headers.
+**MCP server** (`server/`): A single-tool MCP server that handles authentication and HTTP transport. The tool (`appstle_api`) accepts a method, path, optional query params, and optional body. It forwards the request to the Appstle API with proper `X-API-Key` headers. The `start.sh` wrapper loads environment variables from `.env` before starting the server.
 
 **Skill** (`skills/appstle-shopify/`): Loaded by Claude Code on demand when subscription-related topics are detected. Contains the endpoint catalog, critical API quirks, safety rules for destructive operations, and workflow playbooks. This keeps context usage near zero until the skill is actually needed.
-
-## Getting Started
-
-### Prerequisites
-
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and configured
-- Node.js >= 22.0.0
-- An Appstle API key (from your Appstle Shopify app dashboard)
-
-### Installation
-
-```bash
-claude plugin install /path/to/appstle-shopify-plugin
-```
-
-### Build the MCP server
-
-```bash
-cd server
-npm install
-npm run build
-```
-
-## Configuration
-
-Add these environment variables to your project `.env` file:
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `APPSTLE_API_KEY` | Yes | -- | Your Appstle API key for authentication |
-| `APPSTLE_BASE_URL` | No | `https://subscription-admin.appstle.com` | Appstle API base URL |
-
-The plugin reads these variables automatically via the `.mcp.json` registration.
 
 ## Usage Examples
 
@@ -142,6 +180,19 @@ Destructive operations require user confirmation before execution:
 | Replace variant | Changes what customer receives |
 
 The skill enforces a fetch-confirm-execute-verify pattern: always read current state before modifying, confirm with the user, apply the change, then verify the result.
+
+## Troubleshooting
+
+**`appstle-shopify` not showing in `/mcp`?**
+- Restart Claude Code after installing the plugin.
+
+**Status is red/error?**
+- Check that `APPSTLE_API_KEY` is set in your project `.env` or shell environment.
+- The plugin searches `.env` files up to 3 parent directories from the working directory.
+
+**`appstle_api` tool not available?**
+- Run `/mcp` to check server status.
+- Verify the API key is valid by checking your Appstle dashboard.
 
 ## Version History
 

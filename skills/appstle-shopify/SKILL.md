@@ -19,6 +19,13 @@ You have access to the `appstle_api` MCP tool for authenticated Appstle Subscrip
 - **Dates**: ISO 8601 with timezone: `2024-03-15T00:00:00Z`
 - **Status values**: Send lowercase to API (`active`, `paused`, `cancelled`) even though they display as uppercase
 
+## Troubleshooting Setup
+
+If the `appstle_api` tool is not available, check:
+1. Run `/mcp` — is `appstle-shopify` listed? If not, restart Claude Code.
+2. Is `APPSTLE_API_KEY` set? Check your project `.env` or run `echo $APPSTLE_API_KEY` in your shell.
+3. The plugin loads `.env` automatically from your project directory.
+
 ### Tool Invocation
 
 Call the `appstle_api` MCP tool with these parameters:
